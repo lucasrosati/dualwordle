@@ -80,7 +80,7 @@ export async function generateWordsWithGemini(apiKey: string): Promise<{word1: s
           }
         ],
         generationConfig: {
-          temperature: 0.2,
+          temperature: 0.4,
           maxOutputTokens: 20
         }
       })
@@ -100,10 +100,14 @@ export async function generateWordsWithGemini(apiKey: string): Promise<{word1: s
     if (words.length !== 2 || words[0].length !== 5 || words[1].length !== 5) {
       console.error("Generated words don't meet requirements:", words);
       // Fallback to existing word list
-      return {
-        word1: getRandomWord(),
-        word2: getRandomWord()
-      };
+      return getRandomWordPair();
+    }
+    
+    // Check that the words are different
+    if (words[0] === words[1]) {
+      console.error("Generated words are identical:", words);
+      // Fallback to existing word list
+      return getRandomWordPair();
     }
     
     // Adicionar as palavras geradas à lista encadeada se elas não existirem
@@ -113,6 +117,8 @@ export async function generateWordsWithGemini(apiKey: string): Promise<{word1: s
       }
     });
     
+    console.log("Generated words:", words[0], words[1]);
+    
     return {
       word1: words[0],
       word2: words[1]
@@ -120,11 +126,18 @@ export async function generateWordsWithGemini(apiKey: string): Promise<{word1: s
   } catch (error) {
     console.error("Error generating words with Gemini:", error);
     // Fallback to existing word list
-    return {
-      word1: getRandomWord(),
-      word2: getRandomWord()
-    };
+    return getRandomWordPair();
   }
+}
+
+// Helper function to get a pair of different random words
+function getRandomWordPair(): {word1: string, word2: string} {
+  const word1 = getRandomWord();
+  const word2 = getRandomWord(word1);
+  
+  console.log("Using random word pair:", word1, word2);
+  
+  return { word1, word2 };
 }
 
 export function getRandomWord(exclude?: string): string {
@@ -138,6 +151,12 @@ export async function initializeGameWithGemini(apiKey: string): Promise<GameStat
     localStorage.removeItem(STORAGE_KEY_GAME);
     
     const words = await generateWordsWithGemini(apiKey);
+    
+    // Final check to ensure the words are different
+    if (words.word1 === words.word2) {
+      console.error("Got identical words after generation, forcing difference");
+      words.word2 = getRandomWord(words.word1);
+    }
     
     return {
       secretWord1: words.word1,
@@ -216,11 +235,14 @@ export function updateGameState(state: GameState, guess: string): GameState {
   newState.currentGuess = '';
   
   // Check if the word matches either secret word (using WASM)
-  if (wasmCheckWordMatch(guess, state.secretWord1)) {
+  const matchesWord1 = wasmCheckWordMatch(guess, state.secretWord1);
+  const matchesWord2 = wasmCheckWordMatch(guess, state.secretWord2);
+  
+  if (matchesWord1) {
     newState.wordSolved1 = true;
   }
   
-  if (wasmCheckWordMatch(guess, state.secretWord2)) {
+  if (matchesWord2) {
     newState.wordSolved2 = true;
   }
   

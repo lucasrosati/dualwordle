@@ -51,11 +51,17 @@ export function GameBoard({
       
       // Check if this word is already solved in a previous attempt
       const solvedInPreviousAttempt = 
-        wordIndex === 1 && wordSolved1 && attempts.indexOf(secretWord1) < row ||
-        wordIndex === 2 && wordSolved2 && attempts.indexOf(secretWord2) < row;
+        (wordIndex === 1 && wordSolved1 && guess !== secretWord1) ||
+        (wordIndex === 2 && wordSolved2 && guess !== secretWord2);
         
       if (solvedInPreviousAttempt) {
-        return 'correct';
+        // For already solved words, check exact match with current guess
+        if (guess === secretWord) {
+          return 'correct';
+        }
+        
+        // Get the specific letter state for this position
+        return convertLetterState(getLetterStateFromC(guess, secretWord, col));
       }
       
       // If the exact guess matches the secret word, all letters are correct
@@ -135,7 +141,7 @@ export function GameBoard({
       const state1 = getLetterState(row, col, 1);
       const state2 = getLetterState(row, col, 2);
       
-      // Determine final state for rendering (prioritize correct over present over absent)
+      // Determine final state for rendering (for board 2, only use state2)
       let finalState: LetterState = 'empty';
       if (state2 === 'correct') {
         finalState = 'correct';
