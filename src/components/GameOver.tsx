@@ -40,8 +40,18 @@ export function GameOver({
         <p className="mb-4">{message}</p>
         
         <div className="mb-4">
-          <p><strong>Palavra 1:</strong> {secretWord1.toUpperCase()} {wordSolved1 ? '✓' : '✗'}</p>
-          <p><strong>Palavra 2:</strong> {secretWord2.toUpperCase()} {wordSolved2 ? '✓' : '✗'}</p>
+          <p>
+            <strong>Palavra 1:</strong> {secretWord1.toUpperCase()} 
+            <span className={wordSolved1 ? "text-green-600 ml-2" : "text-red-600 ml-2"}>
+              {wordSolved1 ? '✓' : '✗'}
+            </span>
+          </p>
+          <p>
+            <strong>Palavra 2:</strong> {secretWord2.toUpperCase()} 
+            <span className={wordSolved2 ? "text-green-600 ml-2" : "text-red-600 ml-2"}>
+              {wordSolved2 ? '✓' : '✗'}
+            </span>
+          </p>
           <p><strong>Tentativas:</strong> {attempts}</p>
           <p><strong>Acertos:</strong> {acertosCount}</p>
         </div>

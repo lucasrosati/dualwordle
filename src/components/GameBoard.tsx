@@ -49,27 +49,20 @@ export function GameBoard({
       const guess = attempts[row];
       const secretWord = wordIndex === 1 ? secretWord1 : secretWord2;
       
-      // Check if this word is already solved in a previous attempt
-      const solvedInPreviousAttempt = 
-        (wordIndex === 1 && wordSolved1 && guess !== secretWord1) ||
-        (wordIndex === 2 && wordSolved2 && guess !== secretWord2);
-        
-      if (solvedInPreviousAttempt) {
-        // For already solved words, check exact match with current guess
-        if (guess === secretWord) {
-          return 'correct';
-        }
-        
-        // Get the specific letter state for this position
-        return convertLetterState(getLetterStateFromC(guess, secretWord, col));
-      }
-      
-      // If the exact guess matches the secret word, all letters are correct
+      // If the guess matches the secret word exactly, all letters are correct
       if (guess === secretWord) {
         return 'correct';
       }
       
-      // Use WASM to get the letter state
+      // Check if this word is already solved in a previous attempt
+      const isWordSolved = (wordIndex === 1 && wordSolved1) || (wordIndex === 2 && wordSolved2);
+      
+      if (isWordSolved && guess !== secretWord) {
+        // For already solved words, still show the correct feedback for this attempt
+        return convertLetterState(getLetterStateFromC(guess, secretWord, col));
+      }
+      
+      // Use WASM to get the letter state for this specific word
       return convertLetterState(getLetterStateFromC(guess, secretWord, col));
     }
     
@@ -82,38 +75,25 @@ export function GameBoard({
     return 'empty';
   }
   
-  // Generate board rows with proper styling
-  const boardRows = [];
+  // Generate board rows with proper styling for Word 1
+  const boardRows1 = [];
   for (let row = 0; row < MAX_ROWS; row++) {
     const rowTiles = [];
     for (let col = 0; col < 5; col++) {
       const letter = row < currentRow ? attempts[row][col] : (row === currentRow && col < currentGuess.length ? currentGuess[col] : '');
-      const state1 = getLetterState(row, col, 1);
-      const state2 = getLetterState(row, col, 2);
-      
-      // Determine final state for rendering (prioritize correct over present over absent)
-      let finalState: LetterState = 'empty';
-      if (state1 === 'correct' || state2 === 'correct') {
-        finalState = 'correct';
-      } else if (state1 === 'present' || state2 === 'present') {
-        finalState = 'present';
-      } else if (state1 === 'absent' && state2 === 'absent') {
-        finalState = 'absent';
-      } else if (state1 === 'tbd' || state2 === 'tbd') {
-        finalState = 'tbd';
-      }
+      const state = getLetterState(row, col, 1);
       
       rowTiles.push(
         <div 
-          key={`tile-${row}-${col}`}
+          key={`tile1-${row}-${col}`}
           className={cn(
-            'letter-tile',
+            'letter-tile text-white',
             {
-              'bg-correct text-white border-correct': finalState === 'correct',
-              'bg-present text-white border-present': finalState === 'present',
-              'bg-absent text-white border-absent': finalState === 'absent',
-              'bg-transparent': finalState === 'empty',
-              'border-gray-700': finalState === 'tbd',
+              'bg-correct border-correct': state === 'correct',
+              'bg-present border-present': state === 'present',
+              'bg-absent border-absent': state === 'absent',
+              'bg-transparent': state === 'empty',
+              'border-gray-700': state === 'tbd',
               'animate-pop': row === currentRow - 1 && !attempts[row - 1]?.[col + 1],
               'animate-flip': row === currentRow - 1
             }
@@ -125,45 +105,32 @@ export function GameBoard({
       );
     }
     
-    boardRows.push(
+    boardRows1.push(
       <div key={`board-row-1-${row}`} className="flex gap-2 mb-2">
         {rowTiles}
       </div>
     );
   }
 
-  // Do the same for the second word
+  // Generate board rows with proper styling for Word 2
   const boardRows2 = [];
   for (let row = 0; row < MAX_ROWS; row++) {
     const rowTiles = [];
     for (let col = 0; col < 5; col++) {
       const letter = row < currentRow ? attempts[row][col] : (row === currentRow && col < currentGuess.length ? currentGuess[col] : '');
-      const state1 = getLetterState(row, col, 1);
-      const state2 = getLetterState(row, col, 2);
-      
-      // Determine final state for rendering (for board 2, only use state2)
-      let finalState: LetterState = 'empty';
-      if (state2 === 'correct') {
-        finalState = 'correct';
-      } else if (state2 === 'present') {
-        finalState = 'present';
-      } else if (state2 === 'absent') {
-        finalState = 'absent';
-      } else if (state2 === 'tbd') {
-        finalState = 'tbd';
-      }
+      const state = getLetterState(row, col, 2);
       
       rowTiles.push(
         <div 
           key={`tile2-${row}-${col}`}
           className={cn(
-            'letter-tile',
+            'letter-tile text-white',
             {
-              'bg-correct text-white border-correct': finalState === 'correct',
-              'bg-present text-white border-present': finalState === 'present',
-              'bg-absent text-white border-absent': finalState === 'absent',
-              'bg-transparent': finalState === 'empty',
-              'border-gray-700': finalState === 'tbd',
+              'bg-correct border-correct': state === 'correct',
+              'bg-present border-present': state === 'present',
+              'bg-absent border-absent': state === 'absent',
+              'bg-transparent': state === 'empty',
+              'border-gray-700': state === 'tbd',
               'animate-pop': row === currentRow - 1 && !attempts[row - 1]?.[col + 1],
               'animate-flip': row === currentRow - 1
             }
@@ -185,7 +152,7 @@ export function GameBoard({
   return (
     <div className="flex justify-center gap-8 mx-auto">
       <div className="game-board">
-        {boardRows}
+        {boardRows1}
       </div>
       <div className="game-board">
         {boardRows2}
