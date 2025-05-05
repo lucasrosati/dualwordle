@@ -44,7 +44,7 @@ export interface RankingEntry {
 // Function to generate two words using Gemini API
 export async function generateWordsWithGemini(apiKey: string): Promise<{word1: string, word2: string}> {
   try {
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -55,14 +55,14 @@ export async function generateWordsWithGemini(apiKey: string): Promise<{word1: s
           {
             parts: [
               {
-                text: `Generate two 5-letter Portuguese words to use in a Wordle-like game. The words should be common, valid Portuguese words. Each word should contain exactly 5 letters. The two words should be different from each other. Return only the two words in lowercase, separated by a comma with no spaces or additional text. For example: "campo,festa"`
+                text: `Gere duas palavras em português de 5 letras diferentes uma da outra para um jogo tipo Termo (Wordle). As palavras devem ser comuns, apenas com letras sem acentos, e não relacionadas entre si. Essas palavras serão usadas como solução para um jogo. Retorne apenas as duas palavras, separadas por vírgula, em minúsculas, sem explicação ou texto adicional. Por exemplo: "teste,mundo"`
               }
             ]
           }
         ],
         generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 100
+          temperature: 0.2,
+          maxOutputTokens: 20
         }
       })
     });

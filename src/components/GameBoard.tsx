@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LetterState, LetterTile } from '../utils/gameLogic';
+import { LetterState } from '../utils/gameLogic';
 import { cn } from '@/lib/utils';
 
 interface GameBoardProps {
@@ -31,11 +31,18 @@ export function GameBoard({
       const guess = attempts[row];
       const secretWord = wordIndex === 1 ? secretWord1 : secretWord2;
       
-      if ((wordIndex === 1 && wordSolved1) || (wordIndex === 2 && wordSolved2)) {
-        // If word is solved, all future guesses should show green for that word
-        if (row >= attempts.findIndex(attempt => attempt === secretWord)) {
-          return 'correct';
-        }
+      // Check if this word is already solved in a previous attempt
+      const solvedInPreviousAttempt = 
+        wordIndex === 1 && wordSolved1 && attempts.indexOf(secretWord1) < row ||
+        wordIndex === 2 && wordSolved2 && attempts.indexOf(secretWord2) < row;
+        
+      if (solvedInPreviousAttempt) {
+        return 'correct';
+      }
+      
+      // If the exact guess matches the secret word, all letters are correct
+      if (guess === secretWord) {
+        return 'correct';
       }
       
       // Check if the letter is in the correct position
@@ -47,12 +54,21 @@ export function GameBoard({
       if (secretWord.includes(guess[col])) {
         // We need to account for duplicate letters
         const letter = guess[col];
+        
+        // Count how many times this letter appears in the secret word
         const letterCount = secretWord.split('').filter(l => l === letter).length;
-        const correctPositions = guess.split('').filter((l, i) => l === letter && secretWord[i] === letter).length;
+        
+        // Count how many times this letter is in the correct position in the current guess
+        const correctPositions = guess.split('').filter((l, i) => 
+          l === letter && secretWord[i] === letter
+        ).length;
+        
+        // Count how many times this letter has been marked as present in positions before the current one
         const presentPositionsBeforeCurrent = guess.substring(0, col).split('').filter((l, i) => 
           l === letter && secretWord[i] !== letter && secretWord.includes(l)
         ).length;
         
+        // If we haven't exceeded the count of this letter in the secret word, mark as present
         if (correctPositions + presentPositionsBeforeCurrent < letterCount) {
           return 'present';
         }
