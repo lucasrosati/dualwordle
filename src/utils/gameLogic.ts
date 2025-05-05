@@ -1,3 +1,4 @@
+
 // Word database from the original C code
 const WORD_LIST = [
   "claro", "fases", "gesto", "jovem", "lugar", "mente", "noite", "papel", "reino", "senso",
@@ -12,6 +13,14 @@ const WORD_LIST = [
   "golpe", "haste", "imune", "janta", "luzir", "manha", "noiva", "haver", "pente", "dente",
   "sopro"
 ];
+
+// Import functions from wasmLoader.ts
+import { 
+  initWasm, 
+  getLetterStateFromC, 
+  checkWordMatch as wasmCheckWordMatch,
+  isValidGuess as wasmIsValidGuess
+} from './wasmLoader';
 
 export type LetterState = 'correct' | 'present' | 'absent' | 'empty' | 'tbd';
 
