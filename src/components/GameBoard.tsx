@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { LetterState } from '../utils/gameLogic';
 import { cn } from '@/lib/utils';
@@ -84,17 +85,29 @@ export function GameBoard({
       const state1 = getLetterState(row, col, 1);
       const state2 = getLetterState(row, col, 2);
       
+      // Determine final state for rendering (prioritize correct over present over absent)
+      let finalState: LetterState = 'empty';
+      if (state1 === 'correct' || state2 === 'correct') {
+        finalState = 'correct';
+      } else if (state1 === 'present' || state2 === 'present') {
+        finalState = 'present';
+      } else if (state1 === 'absent' && state2 === 'absent') {
+        finalState = 'absent';
+      } else if (state1 === 'tbd' || state2 === 'tbd') {
+        finalState = 'tbd';
+      }
+      
       rowTiles.push(
         <div 
           key={`tile-${row}-${col}`}
           className={cn(
             'letter-tile',
             {
-              'bg-correct text-white border-correct': state1 === 'correct',
-              'bg-present text-white border-present': state1 === 'present' && state2 !== 'correct',
-              'bg-absent text-white border-absent': state1 === 'absent' && state2 !== 'correct' && state2 !== 'present',
-              'bg-transparent': state1 === 'empty',
-              'border-gray-700': state1 === 'tbd',
+              'bg-correct text-white border-correct': finalState === 'correct',
+              'bg-present text-white border-present': finalState === 'present',
+              'bg-absent text-white border-absent': finalState === 'absent',
+              'bg-transparent': finalState === 'empty',
+              'border-gray-700': finalState === 'tbd',
               'animate-pop': row === currentRow - 1 && !attempts[row - 1]?.[col + 1],
               'animate-flip': row === currentRow - 1
             }
@@ -122,17 +135,29 @@ export function GameBoard({
       const state1 = getLetterState(row, col, 1);
       const state2 = getLetterState(row, col, 2);
       
+      // Determine final state for rendering (prioritize correct over present over absent)
+      let finalState: LetterState = 'empty';
+      if (state2 === 'correct') {
+        finalState = 'correct';
+      } else if (state2 === 'present') {
+        finalState = 'present';
+      } else if (state2 === 'absent') {
+        finalState = 'absent';
+      } else if (state2 === 'tbd') {
+        finalState = 'tbd';
+      }
+      
       rowTiles.push(
         <div 
           key={`tile2-${row}-${col}`}
           className={cn(
             'letter-tile',
             {
-              'bg-correct text-white border-correct': state2 === 'correct',
-              'bg-present text-white border-present': state2 === 'present' && state1 !== 'correct',
-              'bg-absent text-white border-absent': state2 === 'absent' && state1 !== 'correct' && state1 !== 'present',
-              'bg-transparent': state2 === 'empty',
-              'border-gray-700': state2 === 'tbd',
+              'bg-correct text-white border-correct': finalState === 'correct',
+              'bg-present text-white border-present': finalState === 'present',
+              'bg-absent text-white border-absent': finalState === 'absent',
+              'bg-transparent': finalState === 'empty',
+              'border-gray-700': finalState === 'tbd',
               'animate-pop': row === currentRow - 1 && !attempts[row - 1]?.[col + 1],
               'animate-flip': row === currentRow - 1
             }
