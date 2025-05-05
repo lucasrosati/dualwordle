@@ -1,4 +1,3 @@
-
 // Word database from the original C code
 const WORD_LIST = [
   "claro", "fases", "gesto", "jovem", "lugar", "mente", "noite", "papel", "reino", "senso",
@@ -40,6 +39,11 @@ export interface RankingEntry {
   attempts: number;
   acertos: number;
 }
+
+// Initialize WebAssembly when this module is loaded
+initWasm().then(success => {
+  console.log("WASM initialization " + (success ? "succeeded" : "failed"));
+});
 
 // Function to generate two words using Gemini API
 export async function generateWordsWithGemini(apiKey: string): Promise<{word1: string, word2: string}> {
@@ -160,27 +164,25 @@ export function initializeGame(): GameState {
 export const STORAGE_KEY_RANKING = 'dueto-ranking';
 export const STORAGE_KEY_GAME = 'dueto-game';
 
+// Convert C letter state number to our string LetterState type
+function convertLetterState(state: number): LetterState {
+  switch(state) {
+    case 0: return 'absent';
+    case 1: return 'present';
+    case 2: return 'correct';
+    case 3: return 'empty';
+    case 4: return 'tbd';
+    default: return 'empty';
+  }
+}
+
 export function checkGuess(guess: string, secretWord: string): LetterState[] {
   const result: LetterState[] = Array(5).fill('absent');
-  const secretLetters = secretWord.split('');
   
-  // First pass: check for correct positions
+  // Use our WebAssembly implementation
   for (let i = 0; i < 5; i++) {
-    if (guess[i] === secretWord[i]) {
-      result[i] = 'correct';
-      secretLetters[i] = '#'; // Mark as used
-    }
-  }
-  
-  // Second pass: check for present letters
-  for (let i = 0; i < 5; i++) {
-    if (result[i] !== 'correct') {
-      const index = secretLetters.indexOf(guess[i]);
-      if (index !== -1) {
-        result[i] = 'present';
-        secretLetters[index] = '#'; // Mark as used
-      }
-    }
+    const stateNum = getLetterStateFromC(guess, secretWord, i);
+    result[i] = convertLetterState(stateNum);
   }
   
   return result;
@@ -194,12 +196,12 @@ export function updateGameState(state: GameState, guess: string): GameState {
   newState.currentRow++;
   newState.currentGuess = '';
   
-  // Check if the word matches either secret word
-  if (guess === state.secretWord1) {
+  // Check if the word matches either secret word (using WASM)
+  if (wasmCheckWordMatch(guess, state.secretWord1)) {
     newState.wordSolved1 = true;
   }
   
-  if (guess === state.secretWord2) {
+  if (wasmCheckWordMatch(guess, state.secretWord2)) {
     newState.wordSolved2 = true;
   }
   
@@ -234,8 +236,8 @@ export function updateGameState(state: GameState, guess: string): GameState {
 }
 
 export function isValidGuess(guess: string): boolean {
-  // We'll consider any 5-letter word as valid for now since we're using Gemini for word generation
-  return guess.length === 5;
+  // Use our WebAssembly implementation
+  return wasmIsValidGuess(guess);
 }
 
 // For ranking - using merge sort (a more efficient algorithm than insertion sort)

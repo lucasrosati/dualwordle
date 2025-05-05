@@ -1,7 +1,7 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { LetterState } from '../utils/gameLogic';
 import { cn } from '@/lib/utils';
+import { getLetterStateFromC, initWasm } from '@/utils/wasmLoader';
 
 interface GameBoardProps {
   attempts: string[];
@@ -24,7 +24,24 @@ export function GameBoard({
 }: GameBoardProps) {
   const MAX_ROWS = 6;
   
-  // Helper function to get letter state
+  // Initialize WASM when component mounts
+  useEffect(() => {
+    initWasm();
+  }, []);
+  
+  // Helper function to convert C letter state to TS letter state
+  function convertLetterState(stateNum: number): LetterState {
+    switch(stateNum) {
+      case 0: return 'absent';
+      case 1: return 'present';
+      case 2: return 'correct';
+      case 3: return 'empty';
+      case 4: return 'tbd';
+      default: return 'empty';
+    }
+  }
+  
+  // Helper function to get letter state from WASM
   function getLetterState(row: number, col: number, wordIndex: 1 | 2): LetterState {
     // For completed rows (submitted guesses)
     if (row < currentRow && row < attempts.length) {
@@ -45,36 +62,8 @@ export function GameBoard({
         return 'correct';
       }
       
-      // Check if the letter is in the correct position
-      if (guess[col] === secretWord[col]) {
-        return 'correct';
-      }
-      
-      // Check if the letter exists in the word but in a different position
-      if (secretWord.includes(guess[col])) {
-        // We need to account for duplicate letters
-        const letter = guess[col];
-        
-        // Count how many times this letter appears in the secret word
-        const letterCount = secretWord.split('').filter(l => l === letter).length;
-        
-        // Count how many times this letter is in the correct position in the current guess
-        const correctPositions = guess.split('').filter((l, i) => 
-          l === letter && secretWord[i] === letter
-        ).length;
-        
-        // Count how many times this letter has been marked as present in positions before the current one
-        const presentPositionsBeforeCurrent = guess.substring(0, col).split('').filter((l, i) => 
-          l === letter && secretWord[i] !== letter && secretWord.includes(l)
-        ).length;
-        
-        // If we haven't exceeded the count of this letter in the secret word, mark as present
-        if (correctPositions + presentPositionsBeforeCurrent < letterCount) {
-          return 'present';
-        }
-      }
-      
-      return 'absent';
+      // Use WASM to get the letter state
+      return convertLetterState(getLetterStateFromC(guess, secretWord, col));
     }
     
     // For current row (uncommitted guess)
