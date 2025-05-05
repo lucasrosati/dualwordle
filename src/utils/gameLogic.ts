@@ -41,8 +41,8 @@ export interface RankingEntry {
   acertos: number;
 }
 
-// Function to generate words using Gemini API
-export async function generateWordWithGemini(apiKey: string, exclude?: string): Promise<string> {
+// Function to generate two words using Gemini API
+export async function generateWordsWithGemini(apiKey: string): Promise<{word1: string, word2: string}> {
   try {
     const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
       method: 'POST',
@@ -55,7 +55,7 @@ export async function generateWordWithGemini(apiKey: string, exclude?: string): 
           {
             parts: [
               {
-                text: `Generate one random 5-letter Portuguese word. The word should be common, valid for word games, and contain exactly 5 letters. Return ONLY the word in lowercase, with no explanation or additional text. ${exclude ? `The word cannot be "${exclude}".` : ''}`
+                text: `Generate two 5-letter Portuguese words to use in a Wordle-like game. The words should be common, valid Portuguese words. Each word should contain exactly 5 letters. The two words should be different from each other. Return only the two words in lowercase, separated by a comma with no spaces or additional text. For example: "campo,festa"`
               }
             ]
           }
@@ -72,22 +72,32 @@ export async function generateWordWithGemini(apiKey: string, exclude?: string): 
     }
 
     const data = await response.json();
-    let word = data.candidates[0].content.parts[0].text.trim().toLowerCase();
+    let result = data.candidates[0].content.parts[0].text.trim().toLowerCase();
     
-    // Clean up the response to ensure it's a valid 5-letter word
-    word = word.replace(/[^a-z]/g, '');
+    // Clean up and extract the two words
+    result = result.replace(/[^a-z,]/g, '');
+    const words = result.split(',');
     
-    if (word.length !== 5) {
-      console.error("Generated word doesn't have 5 letters:", word);
+    if (words.length !== 2 || words[0].length !== 5 || words[1].length !== 5) {
+      console.error("Generated words don't meet requirements:", words);
       // Fallback to existing word list
-      return getRandomWord(exclude);
+      return {
+        word1: getRandomWord(),
+        word2: getRandomWord()
+      };
     }
     
-    return word;
+    return {
+      word1: words[0],
+      word2: words[1]
+    };
   } catch (error) {
-    console.error("Error generating word with Gemini:", error);
+    console.error("Error generating words with Gemini:", error);
     // Fallback to existing word list
-    return getRandomWord(exclude);
+    return {
+      word1: getRandomWord(),
+      word2: getRandomWord()
+    };
   }
 }
 
@@ -101,12 +111,14 @@ export function getRandomWord(exclude?: string): string {
 
 export async function initializeGameWithGemini(apiKey: string): Promise<GameState> {
   try {
-    const secretWord1 = await generateWordWithGemini(apiKey);
-    const secretWord2 = await generateWordWithGemini(apiKey, secretWord1);
+    // Clear previous game state from localStorage
+    localStorage.removeItem(STORAGE_KEY_GAME);
+    
+    const words = await generateWordsWithGemini(apiKey);
     
     return {
-      secretWord1,
-      secretWord2,
+      secretWord1: words.word1,
+      secretWord2: words.word2,
       currentGuess: '',
       attempts: [],
       currentRow: 0,
@@ -124,6 +136,9 @@ export async function initializeGameWithGemini(apiKey: string): Promise<GameStat
 }
 
 export function initializeGame(): GameState {
+  // Clear previous game state from localStorage
+  localStorage.removeItem(STORAGE_KEY_GAME);
+  
   const secretWord1 = getRandomWord();
   const secretWord2 = getRandomWord(secretWord1);
   
@@ -140,6 +155,10 @@ export function initializeGame(): GameState {
     keyboardStates: {},
   };
 }
+
+// Constants for storage keys
+export const STORAGE_KEY_RANKING = 'dueto-ranking';
+export const STORAGE_KEY_GAME = 'dueto-game';
 
 export function checkGuess(guess: string, secretWord: string): LetterState[] {
   const result: LetterState[] = Array(5).fill('absent');
@@ -215,13 +234,8 @@ export function updateGameState(state: GameState, guess: string): GameState {
 }
 
 export function isValidGuess(guess: string): boolean {
-  return guess.length === 5 && WORD_LIST.includes(guess.toLowerCase());
-}
-
-export interface RankingEntry {
-  name: string;
-  attempts: number;
-  acertos: number;
+  // We'll consider any 5-letter word as valid for now since we're using Gemini for word generation
+  return guess.length === 5;
 }
 
 // For ranking - using merge sort (a more efficient algorithm than insertion sort)

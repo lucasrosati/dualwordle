@@ -14,11 +14,10 @@ import {
   isValidGuess, 
   GameState,
   RankingEntry,
-  mergeSort
+  mergeSort,
+  STORAGE_KEY_RANKING,
+  STORAGE_KEY_GAME
 } from '@/utils/gameLogic';
-
-const STORAGE_KEY_RANKING = 'dueto-ranking';
-const STORAGE_KEY_GAME = 'dueto-game';
 
 const Index = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -39,13 +38,8 @@ const Index = () => {
           setRanking(JSON.parse(savedRanking));
         }
         
-        // Load saved game if exists
-        const savedGame = localStorage.getItem(STORAGE_KEY_GAME);
-        
-        if (savedGame) {
-          setGameState(JSON.parse(savedGame));
-        } else if (geminiApiKey) {
-          // Initialize game with Gemini if we have an API key
+        if (geminiApiKey) {
+          // Always initialize a new game with Gemini when the component mounts
           const initializedGame = await initializeGameWithGemini(geminiApiKey);
           setGameState(initializedGame);
         } else {
@@ -179,12 +173,6 @@ const Index = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-8 text-center text-white">DUETO</h1>
-      
-      {!geminiApiKey && (
-        <div className="mb-8">
-          <GeminiApiKeyInput onApiKeySet={setGeminiApiKey} />
-        </div>
-      )}
       
       <Tabs defaultValue="game" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">

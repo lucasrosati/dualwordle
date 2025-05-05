@@ -37,13 +37,13 @@ export function Keyboard({ onKeyPress, keyboardStates }: KeyboardProps) {
     const state = keyboardStates[key];
     switch (state) {
       case 'correct':
-        return 'bg-correct border-correct';
+        return 'bg-[#3AADA3] text-white';
       case 'present':
-        return 'bg-present border-present';
+        return 'bg-[#D9BB62] text-white';
       case 'absent':
-        return 'bg-absent border-absent';
+        return 'bg-[#444444] text-white';
       default:
-        return 'bg-keyboard';
+        return 'bg-[#444444] text-white';
     }
   };
 
@@ -54,7 +54,7 @@ export function Keyboard({ onKeyPress, keyboardStates }: KeyboardProps) {
           {rowIndex === 2 && (
             <button 
               onClick={() => onKeyPress('ENTER')} 
-              className="keyboard-key keyboard-key-action"
+              className="keyboard-key keyboard-key-action bg-[#444444] text-white"
             >
               ENTER
             </button>
@@ -73,7 +73,7 @@ export function Keyboard({ onKeyPress, keyboardStates }: KeyboardProps) {
           {rowIndex === 2 && (
             <button 
               onClick={() => onKeyPress('BACKSPACE')} 
-              className="keyboard-key keyboard-key-action"
+              className="keyboard-key keyboard-key-action bg-[#444444] text-white"
             >
               ←
             </button>

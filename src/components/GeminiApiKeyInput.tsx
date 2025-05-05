@@ -9,17 +9,16 @@ interface GeminiApiKeyInputProps {
 }
 
 export function GeminiApiKeyInput({ onApiKeySet }: GeminiApiKeyInputProps) {
-  const [apiKey, setApiKey] = useState<string>('');
+  const [apiKey, setApiKey] = useState<string>('AIzaSyBAbz8yRrJM8w4nOq0B73yWBEacjwMGXSY');
   const { toast } = useToast();
   
-  // Check if API key is stored in localStorage
+  // Apply API key on component mount
   useEffect(() => {
-    const storedApiKey = localStorage.getItem('gemini-api-key');
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-      onApiKeySet(storedApiKey);
+    if (apiKey) {
+      localStorage.setItem('gemini-api-key', apiKey);
+      onApiKeySet(apiKey);
     }
-  }, [onApiKeySet]);
+  }, [apiKey, onApiKeySet]);
   
   const handleSaveApiKey = () => {
     if (!apiKey.trim()) {
@@ -44,13 +43,12 @@ export function GeminiApiKeyInput({ onApiKeySet }: GeminiApiKeyInputProps) {
     <div className="flex flex-col gap-4 p-4 bg-gray-800 rounded-lg">
       <h3 className="text-lg font-bold text-white">Configurar API do Gemini</h3>
       <p className="text-gray-300 text-sm">
-        Para gerar palavras com o Gemini, é necessário fornecer uma chave de API do Google.
-        Obtenha uma chave em: <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">ai.google.dev</a>
+        A chave de API do Gemini já está configurada. Caso deseje usar outra chave, você pode alterá-la abaixo.
       </p>
       <div className="flex gap-2">
         <Input
           type="password"
-          placeholder="Cole sua chave de API do Gemini aqui"
+          placeholder="Chave de API do Gemini"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           className="flex-1"

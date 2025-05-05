@@ -34,6 +34,13 @@
     --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
+    
+    /* Custom Colors */
+    --correct: 174 49% 45%;
+    --present: 44 56% 62%;
+    --absent: 0 0% 27%;
+    --keyboard: 0 0% 27%;
+    --game-background: 0 0% 12%;
   }
 
   .dark {
@@ -73,7 +80,7 @@
   }
 
   body {
-    @apply bg-game-background text-foreground;
+    @apply bg-[#1D1D1D] text-foreground;
     font-family: 'Inter', sans-serif;
     min-height: 100vh;
     margin: 0;
@@ -99,15 +106,61 @@
 }
 
 .keyboard-key-letter {
-  @apply h-14 px-2 bg-keyboard;
+  @apply h-14 px-2;
   min-width: 2.5rem;
 }
 
 .keyboard-key-action {
-  @apply px-3 bg-gray-600;
+  @apply px-3;
   min-width: 4rem;
 }
 
 .keyboard-row {
   @apply flex gap-1 justify-center my-1;
+}
+
+/* Color classes for the letter tiles */
+.bg-correct {
+  background-color: #3AADA3;
+}
+
+.border-correct {
+  border-color: #3AADA3;
+}
+
+.bg-present {
+  background-color: #D9BB62;
+}
+
+.border-present {
+  border-color: #D9BB62;
+}
+
+.bg-absent {
+  background-color: #444444;
+}
+
+.border-absent {
+  border-color: #444444;
+}
+
+/* Animation classes */
+.animate-pop {
+  animation: pop 0.1s ease-in-out;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.animate-flip {
+  animation: flip 0.5s ease-in-out;
+}
+
+@keyframes flip {
+  0% { transform: rotateX(0); }
+  50% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0); }
 }
