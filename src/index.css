@@ -88,7 +88,7 @@
 }
 
 .letter-tile {
-  @apply flex items-center justify-center w-14 h-14 text-2xl font-bold uppercase border-2 border-gray-400 rounded;
+  @apply flex items-center justify-center w-14 h-14 text-2xl font-bold uppercase border-2 border-gray-400 rounded text-white;
   transition: all 0.2s;
 }
 
