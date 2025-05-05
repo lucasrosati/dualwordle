@@ -3,7 +3,6 @@
 #include <string.h>
 #include <emscripten.h>
 
-// Letter states enum matching JS counterpart
 typedef enum {
   LETTER_ABSENT = 0,
   LETTER_PRESENT = 1,
