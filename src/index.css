@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -33,22 +34,6 @@
     --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -79,14 +64,6 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -96,6 +73,41 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-game-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    margin: 0;
   }
+}
+
+.letter-tile {
+  @apply flex items-center justify-center w-14 h-14 text-2xl font-bold uppercase border-2 border-gray-400 rounded;
+  transition: all 0.2s;
+}
+
+.letter-tile-small {
+  @apply w-12 h-12 text-xl;
+}
+
+.keyboard-key {
+  @apply flex items-center justify-center text-white font-bold rounded cursor-pointer select-none;
+  transition: all 0.1s;
+}
+
+.keyboard-key:active {
+  @apply transform scale-90;
+}
+
+.keyboard-key-letter {
+  @apply h-14 px-2 bg-keyboard;
+  min-width: 2.5rem;
+}
+
+.keyboard-key-action {
+  @apply px-3 bg-gray-600;
+  min-width: 4rem;
+}
+
+.keyboard-row {
+  @apply flex gap-1 justify-center my-1;
 }
