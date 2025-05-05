@@ -22,6 +22,9 @@ import {
   isValidGuess as wasmIsValidGuess
 } from './wasmLoader';
 
+// Importar nossa estrutura de lista encadeada
+import { WordLinkedList } from './LinkedList';
+
 export type LetterState = 'correct' | 'present' | 'absent' | 'empty' | 'tbd';
 
 export interface LetterTile {
@@ -48,6 +51,9 @@ export interface RankingEntry {
   attempts: number;
   acertos: number;
 }
+
+// Inicializar a lista encadeada com as palavras do array
+const wordLinkedList = WordLinkedList.fromArray(WORD_LIST);
 
 // Initialize WebAssembly when this module is loaded
 initWasm().then(success => {
@@ -100,6 +106,13 @@ export async function generateWordsWithGemini(apiKey: string): Promise<{word1: s
       };
     }
     
+    // Adicionar as palavras geradas à lista encadeada se elas não existirem
+    words.forEach(word => {
+      if (!wordLinkedList.contains(word)) {
+        wordLinkedList.append(word);
+      }
+    });
+    
     return {
       word1: words[0],
       word2: words[1]
@@ -115,11 +128,8 @@ export async function generateWordsWithGemini(apiKey: string): Promise<{word1: s
 }
 
 export function getRandomWord(exclude?: string): string {
-  let word;
-  do {
-    word = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
-  } while (exclude && word === exclude);
-  return word;
+  const randomWord = wordLinkedList.getRandomWord(exclude);
+  return randomWord || WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
 }
 
 export async function initializeGameWithGemini(apiKey: string): Promise<GameState> {
