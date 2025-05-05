@@ -6,8 +6,10 @@ import { GameBoard } from '@/components/GameBoard';
 import { Keyboard } from '@/components/Keyboard';
 import { RankingTable } from '@/components/RankingTable';
 import { GameOver } from '@/components/GameOver';
+import { GeminiApiKeyInput } from '@/components/GeminiApiKeyInput';
 import { 
-  initializeGame, 
+  initializeGame,
+  initializeGameWithGemini,
   updateGameState, 
   isValidGuess, 
   GameState,
@@ -19,34 +21,58 @@ const STORAGE_KEY_RANKING = 'dueto-ranking';
 const STORAGE_KEY_GAME = 'dueto-game';
 
 const Index = () => {
-  const [gameState, setGameState] = useState<GameState>(initializeGame);
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [activeTab, setActiveTab] = useState('game');
+  const [geminiApiKey, setGeminiApiKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  // Initialize game when API key is set
   useEffect(() => {
-    // Load saved ranking
-    const savedRanking = localStorage.getItem(STORAGE_KEY_RANKING);
-    if (savedRanking) {
-      setRanking(JSON.parse(savedRanking));
-    }
+    const loadGame = async () => {
+      setIsLoading(true);
+      try {
+        // Load saved ranking
+        const savedRanking = localStorage.getItem(STORAGE_KEY_RANKING);
+        if (savedRanking) {
+          setRanking(JSON.parse(savedRanking));
+        }
+        
+        // Load saved game if exists
+        const savedGame = localStorage.getItem(STORAGE_KEY_GAME);
+        
+        if (savedGame) {
+          setGameState(JSON.parse(savedGame));
+        } else if (geminiApiKey) {
+          // Initialize game with Gemini if we have an API key
+          const initializedGame = await initializeGameWithGemini(geminiApiKey);
+          setGameState(initializedGame);
+        } else {
+          // Fallback to default initialization
+          setGameState(initializeGame());
+        }
+      } catch (error) {
+        console.error("Error loading game:", error);
+        // Fallback to default initialization
+        setGameState(initializeGame());
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Load saved game if exists
-    const savedGame = localStorage.getItem(STORAGE_KEY_GAME);
-    if (savedGame) {
-      setGameState(JSON.parse(savedGame));
-    }
-  }, []);
+    loadGame();
+  }, [geminiApiKey]);
 
+  // Save game state
   useEffect(() => {
-    // Save game state
     if (gameState) {
       localStorage.setItem(STORAGE_KEY_GAME, JSON.stringify(gameState));
     }
   }, [gameState]);
   
   const handleKeyPress = (key: string) => {
-    if (gameState.gameOver) return;
+    if (!gameState || gameState.gameOver) return;
     
     if (key === 'ENTER') {
       if (gameState.currentGuess.length !== 5) {
@@ -83,11 +109,26 @@ const Index = () => {
     }
   };
   
-  const handleRestart = () => {
-    setGameState(initializeGame());
+  const handleRestart = async () => {
+    setIsLoading(true);
+    try {
+      if (geminiApiKey) {
+        const newGame = await initializeGameWithGemini(geminiApiKey);
+        setGameState(newGame);
+      } else {
+        setGameState(initializeGame());
+      }
+    } catch (error) {
+      console.error("Error restarting game:", error);
+      setGameState(initializeGame());
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleSaveScore = (name: string) => {
+    if (!gameState) return;
+    
     const acertos = (gameState.wordSolved1 ? 1 : 0) + (gameState.wordSolved2 ? 1 : 0);
     
     const newRanking = [...ranking, {
@@ -118,9 +159,32 @@ const Index = () => {
     });
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  if (!gameState) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-4xl font-bold mb-8 text-center text-white">DUETO</h1>
+        <GeminiApiKeyInput onApiKeySet={setGeminiApiKey} />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-8 text-center text-white">DUETO</h1>
+      
+      {!geminiApiKey && (
+        <div className="mb-8">
+          <GeminiApiKeyInput onApiKeySet={setGeminiApiKey} />
+        </div>
+      )}
       
       <Tabs defaultValue="game" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">

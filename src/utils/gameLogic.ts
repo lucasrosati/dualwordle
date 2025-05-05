@@ -35,12 +35,92 @@ export interface GameState {
   keyboardStates: Record<string, LetterState>;
 }
 
+export interface RankingEntry {
+  name: string;
+  attempts: number;
+  acertos: number;
+}
+
+// Function to generate words using Gemini API
+export async function generateWordWithGemini(apiKey: string, exclude?: string): Promise<string> {
+  try {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: `Generate one random 5-letter Portuguese word. The word should be common, valid for word games, and contain exactly 5 letters. Return ONLY the word in lowercase, with no explanation or additional text. ${exclude ? `The word cannot be "${exclude}".` : ''}`
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 100
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    let word = data.candidates[0].content.parts[0].text.trim().toLowerCase();
+    
+    // Clean up the response to ensure it's a valid 5-letter word
+    word = word.replace(/[^a-z]/g, '');
+    
+    if (word.length !== 5) {
+      console.error("Generated word doesn't have 5 letters:", word);
+      // Fallback to existing word list
+      return getRandomWord(exclude);
+    }
+    
+    return word;
+  } catch (error) {
+    console.error("Error generating word with Gemini:", error);
+    // Fallback to existing word list
+    return getRandomWord(exclude);
+  }
+}
+
 export function getRandomWord(exclude?: string): string {
   let word;
   do {
     word = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
   } while (exclude && word === exclude);
   return word;
+}
+
+export async function initializeGameWithGemini(apiKey: string): Promise<GameState> {
+  try {
+    const secretWord1 = await generateWordWithGemini(apiKey);
+    const secretWord2 = await generateWordWithGemini(apiKey, secretWord1);
+    
+    return {
+      secretWord1,
+      secretWord2,
+      currentGuess: '',
+      attempts: [],
+      currentRow: 0,
+      gameOver: false,
+      wordSolved1: false,
+      wordSolved2: false,
+      message: '',
+      keyboardStates: {},
+    };
+  } catch (error) {
+    console.error("Error initializing game with Gemini:", error);
+    // Fallback to standard initialization
+    return initializeGame();
+  }
 }
 
 export function initializeGame(): GameState {

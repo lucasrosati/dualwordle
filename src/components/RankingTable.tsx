@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RankingEntry } from '../utils/gameLogic';
 
 interface RankingTableProps {
@@ -12,7 +12,9 @@ export function RankingTable({ ranking }: RankingTableProps) {
     <div className="container mx-auto py-4">
       <h2 className="text-2xl font-bold mb-4">Ranking</h2>
       <Table>
-        <TableCaption>Lista de jogadores por pontuação</TableCaption>
+        <caption className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+          Lista de jogadores por pontuação
+        </caption>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[100px]">#</TableHead>
