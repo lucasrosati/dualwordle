@@ -1,171 +1,84 @@
+/* ================== WASM LOADER =================== */
 
-// WebAssembly module and instance variables
-let wasmModule: WebAssembly.Module | null = null;
-let wasmInstance: WebAssembly.Instance | null = null;
-let wasmMemory: WebAssembly.Memory | null = null;
-let isWasmLoaded = false;
+import engineWasmUrl from '@/wasm/engine.wasm?url';   // URL pública do .wasm
 
-// Interface for C functions exposed through WebAssembly
-interface CGameLogic {
-  _isValidGuess: (strPtr: number) => number;
-  _checkWordMatch: (guessPtr: number, secretPtr: number) => number;
-  _getLetterState: (guessPtr: number, secretPtr: number, position: number) => number;
-  _checkSolvedInPrevious: (attemptsPtr: number, attemptCount: number, currentRow: number, secretPtr: number) => number;
-  _malloc: (size: number) => number;
-  _free: (ptr: number) => void;
+let wasmLoaded = false;
+let wasmMem: WebAssembly.Memory | null = null;
+
+interface CExports {
+  _isValidGuess: (g: string) => number;
+  _checkWordMatch: (g: string, s: string) => number;
+  _getLetterState: (g: string, s: string, i: number) => number;
+  _checkSolvedInPrevious: (ptrArr: number, len: number, row: number, s: string) => number;
+  _malloc: (n: number) => number;
+  _free: (p: number) => void;
 }
+let wasm: CExports | null = null;
 
-// WASM exports with all functions
-let wasmExports: CGameLogic | null = null;
-
-// Helper function to write a string to WASM memory
-function writeStringToMemory(str: string): number {
-  if (!wasmExports || !wasmMemory) return 0;
-  
-  const bytes = new TextEncoder().encode(str + '\0'); // null-terminated
-  const ptr = wasmExports._malloc(bytes.length);
-  const memory = new Uint8Array((wasmMemory as WebAssembly.Memory).buffer);
-  memory.set(bytes, ptr);
+/* helper – escreve string no heap (usado só para checkSolvedInPrevious) */
+function writeStr(str: string): number {
+  if (!wasm || !wasmMem) return 0;
+  const bytes = new TextEncoder().encode(str + '\0');
+  const ptr   = wasm._malloc(bytes.length);
+  new Uint8Array(wasmMem.buffer).set(bytes, ptr);
   return ptr;
 }
 
-// Helper function to read a string from WASM memory
-function readStringFromMemory(ptr: number, maxLength: number = 100): string {
-  if (!wasmMemory) return '';
-  
-  const memory = new Uint8Array((wasmMemory as WebAssembly.Memory).buffer);
-  let end = ptr;
-  while (end < ptr + maxLength && memory[end] !== 0) end++;
-  const bytes = memory.slice(ptr, end);
-  return new TextDecoder().decode(bytes);
-}
-
-// Initialize WebAssembly module
+/* ------------ loader ------------ */
 export async function initWasm(): Promise<boolean> {
-  if (isWasmLoaded) return true;
-  
+  if (wasmLoaded) return true;
+
   try {
-    // In a real project, you would fetch your compiled WASM file here
-    // Since we can't compile C in this environment, we're mocking the WASM loading
-    
-    // Mock implementation - in a real project, replace with actual compiled WASM
-    wasmExports = mockWasmFunctions();
-    isWasmLoaded = true;
-    console.log("WASM logic loaded (mock implementation)");
+    const mod      = await import('@/wasm/engine.js');
+    const factory: any = typeof mod === 'function' ? mod : (mod as any).default;
+
+    if (typeof factory !== 'function') {
+      throw new Error('engine.js não contém factory – verifique flags emcc');
+    }
+
+    const Module: any = await factory({
+      locateFile: () => engineWasmUrl,        // aponta engine.wasm
+    });
+
+    wasmMem = Module.wasmMemory ?? (Module.HEAP8 && Module.HEAP8.buffer);
+    wasm = {
+      _isValidGuess:          Module.cwrap('isValidGuess', 'number', ['string']),
+      _checkWordMatch:        Module.cwrap('checkWordMatch', 'number', ['string','string']),
+      _getLetterState:        Module.cwrap('getLetterState', 'number', ['string','string','number']),
+      _checkSolvedInPrevious: Module.cwrap('checkSolvedInPrevious','number',['string','number','number','string']),
+      _malloc:                Module._malloc,
+      _free:                  Module._free,
+    };
+
+    wasmLoaded = true;
+    console.log('✅ WASM real carregado');
     return true;
-  } catch (error) {
-    console.error("Failed to load WASM:", error);
+  } catch (err) {
+    console.error('❌ Falha ao carregar WASM – usando mock.', err);
     return false;
   }
 }
 
-// Mock implementation of WASM functions (in a real project, this would be the compiled C code)
-function mockWasmFunctions(): CGameLogic {
-  // Create a shared memory
-  wasmMemory = new WebAssembly.Memory({ initial: 256 }); // 256 pages (16MB)
-  const memory = new Uint8Array(wasmMemory.buffer);
-  let heapNext = 1024; // Start heap after 1KB
-  
-  // Very simple malloc implementation
-  const malloc = (size: number): number => {
-    const ptr = heapNext;
-    heapNext += size;
-    return ptr;
-  };
-  
-  const free = (_ptr: number): void => {
-    // In our simple mock, we don't need to implement free
-  };
-  
-  return {
-    _malloc: malloc,
-    _free: free,
-    
-    _isValidGuess: (strPtr: number): number => {
-      const str = readStringFromMemory(strPtr);
-      return str.length === 5 ? 1 : 0;
-    },
-    
-    _checkWordMatch: (guessPtr: number, secretPtr: number): number => {
-      const guess = readStringFromMemory(guessPtr);
-      const secret = readStringFromMemory(secretPtr);
-      return guess === secret ? 1 : 0;
-    },
-    
-    _getLetterState: (guessPtr: number, secretPtr: number, position: number): number => {
-      const guess = readStringFromMemory(guessPtr);
-      const secret = readStringFromMemory(secretPtr);
-      
-      if (position < 0 || position >= 5) return 3; // EMPTY
-      
-      // Direct match
-      if (guess[position] === secret[position]) {
-        return 2; // CORRECT
-      }
-      
-      // Check if letter exists elsewhere
-      const letter = guess[position];
-      if (!secret.includes(letter)) {
-        return 0; // ABSENT
-      }
-      
-      // Count occurrences
-      const letterCount = [...secret].filter(c => c === letter).length;
-      const correctPositions = [...guess].filter((c, i) => c === letter && secret[i] === c).length;
-      const presentBefore = guess.substring(0, position).split('').filter((c, i) => 
-        c === letter && secret[i] !== c && secret.includes(c)
-      ).length;
-      
-      if (correctPositions + presentBefore < letterCount) {
-        return 1; // PRESENT
-      }
-      
-      return 0; // ABSENT
-    },
-    
-    _checkSolvedInPrevious: (attemptsPtr: number, attemptCount: number, currentRow: number, secretPtr: number): number => {
-      // This is hard to mock properly without the actual C memory layout
-      // In real implementation this would check the attempts array in memory
-      // For now, we'll always return 0 (not solved)
-      return 0;
-    }
-  };
-}
-
-// Exported JS wrappers for C functions
+/* ------------ wrappers JS → C ------------ */
 export function isValidGuess(guess: string): boolean {
-  if (!wasmExports) return guess.length === 5;
-  
-  const guessPtr = writeStringToMemory(guess);
-  const result = wasmExports._isValidGuess(guessPtr);
-  wasmExports._free(guessPtr);
-  return result === 1;
+  if (!wasm) return guess.length === 5;           // fallback
+  return wasm._isValidGuess(guess) === 1;
 }
 
-export function checkWordMatch(guess: string, secretWord: string): boolean {
-  if (!wasmExports) return guess === secretWord;
-  
-  const guessPtr = writeStringToMemory(guess);
-  const secretPtr = writeStringToMemory(secretWord);
-  const result = wasmExports._checkWordMatch(guessPtr, secretPtr);
-  wasmExports._free(guessPtr);
-  wasmExports._free(secretPtr);
-  return result === 1;
+export function checkWordMatch(guess: string, secret: string): boolean {
+  if (!wasm) return guess === secret;
+  return wasm._checkWordMatch(guess, secret) === 1;
 }
 
-export function getLetterStateFromC(guess: string, secretWord: string, position: number): number {
-  if (!wasmExports) {
-    // Fallback implementation
-    if (guess.length < 5 || position < 0 || position >= 5) return 3; // EMPTY
-    if (guess[position] === secretWord[position]) return 2; // CORRECT
-    if (secretWord.includes(guess[position])) return 1; // PRESENT
-    return 0; // ABSENT
-  }
-  
-  const guessPtr = writeStringToMemory(guess);
-  const secretPtr = writeStringToMemory(secretWord);
-  const result = wasmExports._getLetterState(guessPtr, secretPtr, position);
-  wasmExports._free(guessPtr);
-  wasmExports._free(secretPtr);
-  return result;
+export function getLetterStateFromC(guess: string, secret: string, idx: number): number {
+  if (!wasm) return 3;                            // EMPTY
+  return wasm._getLetterState(guess, secret, idx);
+}
+
+export function checkSolvedInPrevious(attempts: string[], row: number, secret: string): boolean {
+  if (!wasm) return false;
+  const ptrArr = writeStr(attempts.join(','));
+  const ok     = wasm._checkSolvedInPrevious(ptrArr, attempts.length, row, secret);
+  wasm._free(ptrArr);
+  return ok === 1;
 }
