@@ -26,7 +26,7 @@ const Index: React.FC = () => {
   /* ------------------------------------------------------------------ */
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
-  const [showRanking, setShowRanking] = useState(false);
+  const [showRanking, setShowRanking] = useState(() => window.location.hash === '#ranking');
   const [geminiApiKey, setGeminiApiKey] = useState<string | null>(
     'AIzaSyBAbz8yRrJM8w4nOq0B73yWBEacjwMGXSY',
   );
